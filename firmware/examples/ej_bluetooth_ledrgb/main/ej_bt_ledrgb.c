@@ -84,14 +84,15 @@ void read_data(uint8_t * data, uint8_t length){
 void app_main(void){
     static neopixel_color_t color;
     ble_config_t ble_configuration = {
-        "ESP_EDU_1",
+        "rgb_prueba",
         read_data
     };
 
     LedsInit();
     BleInit(&ble_configuration);
     /* Se inicializa el LED RGB de la placa */
-    NeoPixelInit(BUILT_IN_RGB_LED_PIN, BUILT_IN_RGB_LED_LENGTH, &color);
+    NeoPixelInit(GPIO_22, 11, &color);
+   // NeoPixelInit(BUILT_IN_RGB_LED_PIN, BUILT_IN_RGB_LED_LENGTH, &color);
     NeoPixelAllOff();
     while(1){
         vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
