@@ -32,12 +32,6 @@
         },
         {
             "path": "examples/ej_mfrc522"
-        },
-        {
-            "path": "examples/control_leds"
-        },
-        {
-            "path": "../../../../Users/Admin/Desktop/Perea_2C_2024/firmware/projects/1_blinking_switch"
         }
     ],
     "settings": {
