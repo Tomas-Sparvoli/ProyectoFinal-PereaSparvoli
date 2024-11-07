@@ -18,6 +18,7 @@
  */
 
 /*==================[inclusions]=============================================*/
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -34,35 +35,32 @@
 
 /*==================[macros and definitions]=================================*/
 
-#define CONFIG_BLINK_PERIOD 500
-#define LED_BT	LED_1
-
-#define BUILT_IN_RGB_LED_PIN          GPIO_8        /*> ESP32-C6-DevKitC-1 NeoPixel it's connected at GPIO_8 */
-#define BUILT_IN_RGB_LED_LENGTH       1             /*> ESP32-C6-DevKitC-1 NeoPixel has one pixel */
-
-#define LED_COUNT 9               // Número de LEDs en la tira (cada LED representa un ángulo)
-#define START_ANGLE 110           // Ángulo inicial (110 grados)
-#define ANGLE_STEP (START_ANGLE / LED_COUNT)  // Paso entre cada LED en grados
-//#define BUTTON_PIN GPIO_0         // Pin del botón
+#define CONFIG_BLINK_PERIOD 1000
+#define LED_COUNT 11               // Número de LEDs en la tira (cada LED representa un ángulo)
+#define START_ANGLE 110            // Ángulo inicial (110 grados)
 
 /*==================[typedef]================================================*/
 
-TaskHandle_t led_task_handle = NULL;
+TaskHandle_t tecla_task_handle = NULL;
+TaskHandle_t boton_task_handle = NULL;
 
-bool is_running = false;
-uint8_t current_led = 0;
+uint8_t current_led = 10;
 uint8_t current_angle = START_ANGLE;
 uint8_t teclas;
-
+uint8_t angle_selec;
+neopixel_color_t color;
 
 /*==================[function declarations]===============================*/
 
 /**
  * @brief Función invocada en la interrupción del timer A
  */
-void FuncTimer(void* param){
-    vTaskNotifyGiveFromISR(led_task_handle, pdFALSE);    /* Envía una notificación a la tarea asociada al LED_1 */
-}
+void FuncTimerA(void* param);
+
+/**
+ * @brief Función invocada en la interrupción del timer B
+ */
+void FuncTimerB(void* param);
 
 /**
  * @fn void LedControlTask(void *pvParameter);
@@ -70,7 +68,7 @@ void FuncTimer(void* param){
  * @param[in] void *pvParameter
  * @return
  */
-void LedControlTask(void *pvParameter);
+void LedControlTask();
 
 /**
  * @fn static void CambiarEstado(void *pvParameter);
@@ -80,125 +78,123 @@ void LedControlTask(void *pvParameter);
  */
 void CambiarEstado(void *pvParameter);
 
-/**
- * @fn static void ButtonTask(void *pvParameter);
- * @brief Función que controla el botón para iniciar/detener la secuencia de LEDs.
- * @param void *pvParameter 
- * @return 
- */
-void ButtonTask(void *pvParameter);
-
-/**
- * @fn static void DisplayAngle(uint8_t angle);
- * @brief Función que muestra el ángulo actual en una pantalla (simulado con printf).
- * @param void *pvParameter 
- * @return 
- */
-void DisplayAngle(uint8_t angle);
-
 /*==================[internal functions declaration]=========================*/
 
-void LedControlTask(void *pvParameter){
-    uint8_t i = 1;
-    neopixel_color_t color [11];
-    while(true){ 
-
-    if(is_running == true){
-        
-        // Encender el LED correspondiente
-        NeoPixelSetPixel(current_led,  NEOPIXEL_COLOR_RED);
-        // Esperar 3 segundos
-        vTaskDelay(3000 / portTICK_PERIOD_MS);
-
-        // Apagar el LED anterior
-        NeoPixelSetPixel(current_led -1, 0x000000);
-
-        // Mover al siguiente LED
-            current_led++;
-            current_angle -= ANGLE_STEP;
-
-        // Si llegamos al último LED (ángulo 0), detener la secuencia
-        if (current_led >= LED_COUNT) {
-            is_running = false;
-            current_led = 0;
-            current_angle = START_ANGLE;
-        }
-        else {
-            // Suspender la tarea si no está corriendo
-            //vTaskSuspend(NULL);
-    }
-    }
+void FuncTimerA(void* param){
+    vTaskNotifyGiveFromISR(tecla_task_handle, pdFALSE);    /* Envía una notificación a la tarea asociada al LED_1 */
 }
+
+void FuncTimerB(void* param){
+    vTaskNotifyGiveFromISR(boton_task_handle, pdFALSE);    /* Envía una notificación a la tarea asociada al LED_1 */
+}
+
+void LedControlTask()
+{
+            // Encender el LED correspondiente
+            NeoPixelSetPixel(current_led, color);
+            printf("Ángulo: %d grados\n", current_angle);
+            angle_selec=current_angle;
+
+            // Esperar 3 segundos
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+
+            // Apagar el LED anterior
+            NeoPixelSetPixel(current_led, 0x000000);
+
+            // Mover al siguiente LED
+                current_led--;
+                current_angle -= 10;
+            
+            // Si llegamos al último LED (ángulo 110), detener la secuencia
+           /* if (current_led >= LED_COUNT) {
+                is_running = false;
+                current_led = 11;
+            }*/       
+    
 }
 
 void CambiarEstado(void *param)
 {
-	uint8_t caracter;
-	UartReadByte(UART_PC, &caracter);
-	if (caracter == 'l')
-		is_running = !is_running;
-}
-
-void ButtonTask(void *pvParameter){
-while (true) {
-        teclas = SwitchesRead();  // Actualizar el estado del botón
-        // Detectar si el botón fue presionado
-        switch(teclas){
-        case SWITCH_1:
-            if (is_running) {
-                // Si ya está corriendo, detener y mostrar el ángulo
-                is_running = false;
-                DisplayAngle(current_angle);
-                //vTaskSuspend(led_task_handle);  // Suspender la tarea de control de LEDs
-            } else {
-                // Si no está corriendo, iniciar la secuencia
-                is_running = true;
-                current_led = 0;
-                current_angle = START_ANGLE;
-                vTaskResume(led_task_handle);  // Reanudar la tarea de control de LEDs
-            }
-            // Esperar un poco para evitar rebotes de botón
-            vTaskDelay(500 / portTICK_PERIOD_MS);
-        break;
+    while (true) { 
+    ulTaskNotifyTake(pdTRUE,portMAX_DELAY);
+    uint8_t caracter;
+    UartReadByte(UART_PC, &caracter);
+    if (caracter=='b')
+        {
+            color =  NEOPIXEL_COLOR_WHITE;
         }
-        vTaskDelay(50 / portTICK_PERIOD_MS);  // Pequeño retardo para evitar saturar la CPU
+    if (caracter=='r')
+        {
+            color =  NEOPIXEL_COLOR_RED;
+        }
+    if (caracter=='l')
+        {
+            LedControlTask(); 
+            caracter=0;
+        }
+    
+    if (caracter=='p')
+        {
+        printf("Ángulo: %d grados\n", angle_selec);
+            current_led=10;
+            current_angle=110;
+            caracter=0;
+        }
     }
 }
 
-void DisplayAngle(uint8_t angle) {
-    printf("Ángulo detenido: %d grados\n", angle);
-}
-
 /*==================[external functions definition]==========================*/
-void app_main(void){
-    static neopixel_color_t color;
-    ble_config_t ble_configuration = {
+void app_main(void)
+{
+    static neopixel_color_t color[11];
+
+   /* ble_config_t ble_configuration = {
         "campimetro",
         LedControlTask
-    };
+    };*/
 
     LedsInit();
-    BleInit(&ble_configuration);
+   /* BleInit(&ble_configuration); */
 
     /* Se inicializa el LED RGB de la placa */
-    NeoPixelInit(GPIO_9, 11, &color);
+    NeoPixelInit(GPIO_19, 11, &color);
     NeoPixelAllOff();
-    NeoPixelAllColor(NeoPixelRgb2Color(100, 0, 0));
+    //NeoPixelAllColor(NeoPixelRgb2Color(100, 0, 0));
 
     // Inicialización del botón
     SwitchesInit();
     
     /* Inicialización de timers */
-    timer_config_t timer_led = {
+    timer_config_t timer_tecla = {
         .timer = TIMER_A,
         .period = CONFIG_BLINK_PERIOD,
-        .func_p = FuncTimer,
+        .func_p = FuncTimerA,
         .param_p = NULL
     };
+    TimerInit(&timer_tecla);
+
+     /* Inicialización de timers */
+    timer_config_t timer_boton = {
+        .timer = TIMER_B,
+        .period = CONFIG_BLINK_PERIOD,
+        .func_p = FuncTimerB,
+        .param_p = NULL
+    };
+    TimerInit(&timer_boton);
+    
+    serial_config_t pantalla=
+    {
+        .port = UART_PC,
+        .baud_rate = 9600,
+        .func_p = CambiarEstado,
+        .param_p = NULL,
+    };
+    UartInit (&pantalla);
 
    // Crear tareas
-    xTaskCreate(LedControlTask, "LedControlTask", 2048, NULL, 5, &led_task_handle);
-    xTaskCreate(ButtonTask, "ButtonTask", 1024, NULL, 5, NULL);
+    xTaskCreate(CambiarEstado, "CambiarEstadoTask", 4096, NULL, 5, &tecla_task_handle);
+
+    TimerStart(timer_tecla.timer);
 }
 
 /*==================[end of file]============================================*/

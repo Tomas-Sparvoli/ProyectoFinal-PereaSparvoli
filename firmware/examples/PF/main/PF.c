@@ -23,7 +23,7 @@
  *
  */
 
-/*==================[inclusions]=============================================*/
+//==================[inclusions]=============================================//
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -37,38 +37,42 @@
 #include "gpio_mcu.h"
 #include "neopixel_stripe.h"
 #include "ble_mcu.h"
-/*==================[macros and definitions]=================================*/
+#include "math.h"
 
-/*==================[internal data definition]===============================*/
+#define BUILT_IN_RGB_LED_PIN          GPIO_8        /*> ESP32-C6-DevKitC-1 NeoPixel it's connected at GPIO_8 */
+#define BUILT_IN_RGB_LED_LENGTH       1             /*> ESP32-C6-DevKitC-1 NeoPixel has one pixel */
+
+#define LED_COUNT 9               // Número de LEDs en la tira (cada LED representa un ángulo)
+#define START_ANGLE 110           // Ángulo inicial (110 grados)
+#define ANGLE_STEP (START_ANGLE / LED_COUNT)  // Paso entre cada LED en grados
+//#define BUTTON_PIN GPIO_0         // Pin del botón
+
+
+//==================[internal data definition]===============================//
 
 TaskHandle_t cambiomotor = NULL;
 TaskHandle_t presionoTecla = NULL;
+TaskHandle_t enviar = NULL;
+
 
 bool giro = false;
 bool led = false;
 bool mapa = false;
-uint8_t angulo = 0;
-uint8_t angulo_led = 0;
+long int angulo = 0;
+long int angulo_led = 0;
+
+
+uint8_t current_led = 10;
+uint8_t current_angle = START_ANGLE;
+uint8_t teclas;
+uint8_t angle_selec;
+neopixel_color_t color;
+
  
-/*==================[internal functions declaration]=========================*/
-
-typedef struct
-{
-	gpio_t pin;			/*!< GPIO pin number */
-	io_t dir;			/*!< GPIO direction '0' IN;  '1' OUT*/
-} gpioConf_t;
-
-
-/**
- * @brief Función que se ejecuta en la interrupción del temporizador A.
- *
- * Envía una notificación a la tarea encargada de la lectura de entrada analógica.
- * 
- * @param param Parámetro opcional (no utilizado).
- */
+//==================[internal functions declaration]=========================//
 
 void FuncTimerA(void* param){
-    vTaskNotifyGiveFromISR (cambiomotor, pdFALSE); 
+    vTaskNotifyGiveFromISR( presionoTecla, pdFALSE); 
 }
 
 /**
@@ -84,12 +88,48 @@ void FuncTimerB(void* param){
 }
 
 /**
- * @brief Función que cambia el estado de las variables `encendido` y `hold` basándose en el input UART.
+ * @brief Función que cambia el estado de las variables encendido y hold basándose en el input UART.
  * 
  * Esta función permite cambiar el estado de las variables mediante comandos enviados a través del puerto UART.
  * 
  * @param param Parámetro opcional (no se utiliza en esta función).
  */
+
+void enviar_datos()
+{
+	char msg [30];
+
+	long int xcentrado=110;
+	long int ycentrado=110;
+
+	long int distancia_rectangularx=angle_selec*cos(angulo);
+	long int distancia_rectangulary=angle_selec*sin(angulo );
+    sprintf(msg,"*GX%ldY%ld*",xcentrado+distancia_rectangularx,ycentrado+distancia_rectangulary);
+    BleSendString(msg);
+	printf("se enviaron los datos\r\n");
+	printf("el angulo enviado fue de %ld\r\n",angulo);
+	printf("el led seleccionado es de %d\r\n",angle_selec);
+}
+
+void LedControlTask()
+{
+            // Encender el LED correspondiente
+            NeoPixelSetPixel(current_led, color);
+            printf("Ángulo: %d grados\n", current_angle);
+            angle_selec=current_angle;
+
+            // Esperar 3 segundos
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+
+            // Apagar el LED anterior
+            NeoPixelSetPixel(current_led, 0x000000);
+
+            // Mover al siguiente LED
+                current_led--;
+                current_angle -= 10;     
+    
+}
+
 void cambioEstado(void *param)
 {
 	while(true)
@@ -98,81 +138,118 @@ void cambioEstado(void *param)
 		uint8_t caracter;
 		UartReadByte(UART_PC, &caracter);
 		if (caracter == 'a')
-			giro = !giro;
-		if (caracter == 'l')
-			led = !led;
+			{
+				giro = true;
+				vTaskNotifyGiveFromISR (cambiomotor, pdFALSE);
+				caracter = 0;
+			}
 		if (caracter == 'm')
-			mapa=!mapa;
+			{	
+				mapa=!mapa;
+				enviar_datos();
+				printf("Ángulo: %d grados\n", l64a);
+            	current_led=10;
+            	current_angle=110;
+            	caracter = 0;			
+			}
+		if (caracter=='b')
+        {
+            color =  NEOPIXEL_COLOR_WHITE;
+			printf("el color seleccionado es el blanco");
+			caracter=0;
+		}
+    if (caracter=='r')
+        {
+            color =  NEOPIXEL_COLOR_RED;
+			printf("el color seleccionado es el rojo");
+			caracter=0;
+        }
+    if (caracter=='l')
+        {
+            LedControlTask(); 
+            caracter=0;
+        }
+
 	}
+
 }
 
-void enviar_datos()
-{
-char msg [30];
-    sprintf(msg,'*GX%dY%d*',giro,angulo_led);
-    BleSendString(msg);
-	vTaskDelay(100/portTICK_PERIOD_MS);
-}
 
 void motorpaso()
 {
-	   	gpioConf_t arreglo[]= 	
-	{
-		{GPIO_2,GPIO_OUTPUT}, //pin de cantidad de pasos del motor
-		{GPIO_3,GPIO_OUTPUT}, //pin de direccionamiento del motor
-		{GPIO_1,GPIO_INPUT},  //pin fin de carrera
-	};
 
-	for (int i = 0; i<3; i++)
-		{
-			GPIOInit(arreglo[i].pin, arreglo[i].dir);
-		}
-		
+	GPIOInit(GPIO_2,GPIO_OUTPUT); //pin de cantidad de pasos del motor
+	GPIOInit(GPIO_3,GPIO_OUTPUT); //pin de direccionamiento del motor
+	
 	while(1)
 	{		
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		{	if (giro==true)
+		if (giro==true)
 			{
-				if (arreglo[2].pin==false)
-				{		for (int i = 0; i < 200; i++) //
-						GPIOOn(arreglo[0].pin);	
-						GPIOOff(arreglo[1].pin);
-						vTaskDelay(500 / portTICK_PERIOD_MS);
-						GPIOOff(arreglo[0].pin);	
-						angulo = 0;
+			if (angulo > 330)
+				{	
+					GPIOOff(GPIO_3);	
+					for (int i = 0; i < 800; i++) 
+						{
+						GPIOOn(GPIO_2);	
+						vTaskDelay(100 / portTICK_PERIOD_MS);
+						GPIOOff(GPIO_2);
+						vTaskDelay(100/portTICK_PERIOD_MS);
+						}	
+					angulo = 0;
 				}	
 				else 
-				{ 
-					for (int i = 0; i < 25; i++) //cantidad de pasos necesarios para que el motor gire 30 grados en ese periodo de tiempo 
+				{ 	
+					
+					GPIOOn(GPIO_3); //seleccionio el modo de giro contrario a la aguja del reloj
+					printf("entra al +45 grados\n\r");
+					for (int i = 0; i < 100; i++) //cantidad de pasos necesarios para que el motor gire 30 grados en ese periodo de tiempo 
 					{
-						GPIOOn(arreglo[0].pin);	//cmabio el estado logico de la salida del motor
-						GPIOOn(arreglo[1].pin); //seleccionio el modo de giro contrario a la aguja del reloj 
-						vTaskDelay(500 / portTICK_PERIOD_MS); //velocidad de giro
-						GPIOOff(arreglo[0].pin); //cambio el estado de la salida del motor
+						GPIOOn(GPIO_2);	//cmabio el estado logico de la salida del motor
+						vTaskDelay(100 / portTICK_PERIOD_MS); //velocidad de giro
+						GPIOOff(GPIO_2); //cambio el estado de la salida del motor
+						vTaskDelay(100 / portTICK_PERIOD_MS);
 					}	
-				angulo = angulo + 30;
+					angulo = angulo + 45;
+					printf("el angulo es :%ld\r\n",angulo);
+					//printf("termina los 30 grados\n\r");
 				}
+				giro=false;
+				printf("cambio el estado a falso\n\r");
+
 			}
-			giro=!giro;
-		}
-	enviar_datos();
 	}
 }
-	
 
 
-/*==================[external functions definition]==========================*/
+
+//==================[external functions definition]==========================//
 
 void app_main(void)
 {
-	timer_config_t timer_motor = 
+	static neopixel_color_t color[11];
+
+	 /* Se inicializa el LED RGB de la placa */
+    NeoPixelInit(GPIO_19, 11, &color);
+    NeoPixelAllOff();
+
+	timer_config_t timer_leds = 
 	{
-		.timer = TIMER_A,
-		.period = 1000,
+		.timer = TIMER_B,
+		.period = 100000,
 		.func_p = FuncTimerA,
 		.param_p = NULL
 	};
-	TimerInit(&timer_motor);
+	TimerInit(&timer_leds);
+
+	timer_config_t timer_estado = 
+	{
+		.timer = TIMER_B,
+		.period = 100000,
+		.func_p = FuncTimerB,
+		.param_p = NULL
+	};
+	TimerInit(&timer_estado);
 
 	serial_config_t pantalla = 
 	{
@@ -184,15 +261,17 @@ void app_main(void)
 	UartInit(&pantalla);
 
     ble_config_t ble_configuration = {
-        "hola",
+        "Campimetro",
         NULL
     };
 	BleInit(&ble_configuration);
 
-xTaskCreate(&cambioEstado,"cambia",512,NULL,5,presionoTecla);
-xTaskCreate(&motorpaso, "cambio del motor", 2048, NULL, 5, &cambiomotor);
-xTaskCreate(&enviar_datos,"envio",512,NULL,5,NULL);
 
+xTaskCreate(&cambioEstado,"cambia",4096,NULL,5,&presionoTecla);
+xTaskCreate(&motorpaso, "cambio del motor", 4096, NULL, 5, &cambiomotor);
+
+TimerStart(timer_estado.timer);
+TimerStart(timer_leds.timer);
 LedsInit();
    while (1)
    { 
@@ -210,5 +289,6 @@ LedsInit();
         }
    }
 
+
 }
-/*==================[end of file]============================================*/
+//==================[end of file]============================================//
