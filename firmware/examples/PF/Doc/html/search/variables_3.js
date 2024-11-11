@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['cambiomotor_0',['cambiomotor',['../_p_f_8c.html#a40075a8f2ec2e96e15da146813605943',1,'PF.c']]],
+  ['cccdhandle_1',['cccdHandle',['../structhid__report__map__t.html#abdc686bdd97b9a0e12f56eb9720f4d0d',1,'hid_report_map_t::cccdHandle'],['../structhid_rpt_map__t.html#abdc686bdd97b9a0e12f56eb9720f4d0d',1,'hidRptMap_t::cccdHandle']]],
+  ['char_5fhandle_2',['char_handle',['../structgatts__profile__inst.html#ac80bb15e946e87c121c1c47621314467',1,'gatts_profile_inst']]],
+  ['char_5fuuid_3',['char_uuid',['../structgatts__profile__inst.html#a5e3b2db09239e1969447c12affed4d47',1,'gatts_profile_inst']]],
+  ['clk_5fmode_4',['clk_mode',['../structspi__mcu__config__t.html#a4737b644103a7cbe225b36724f8d9120',1,'spi_mcu_config_t']]],
+  ['cmd_5',['cmd',['../structlcd__cmd__t.html#a4d43e8212bdc9dbee866506f04effcea',1,'lcd_cmd_t::cmd'],['../bootloader-cfgcmd_8txt.html#adfc5ba7e22f5e4a6221c12a70503bef3',1,'cmd:&#160;bootloader-cfgcmd.txt']]],
+  ['color_6',['color',['../_p_f_8c.html#a259c9799eadb66184627d32aba500c07',1,'PF.c']]],
+  ['column_5faddr_5fset_7',['column_addr_set',['../ili9341_8c.html#a263ce7bccbcd1c94f9c234c101df296d',1,'ili9341.c']]],
+  ['command_8',['command',['../struct_c_m_d__t.html#a4635796d5c7e7a2639b11dfe83718acc',1,'CMD_t']]],
+  ['congest_9',['congest',['../structhidd__clcb__t.html#a1554ab907f271c8497031c1b79ec6e9e',1,'hidd_clcb_t']]],
+  ['conn_5fid_10',['conn_id',['../structesp__hidd__cb__param__t_1_1hidd__connect__evt__param.html#a71a8a39270ae1bf01ad381dca0e95c1b',1,'esp_hidd_cb_param_t::hidd_connect_evt_param::conn_id'],['../structesp__hidd__cb__param__t_1_1hidd__vendor__write__evt__param.html#a71a8a39270ae1bf01ad381dca0e95c1b',1,'esp_hidd_cb_param_t::hidd_vendor_write_evt_param::conn_id'],['../structesp__hidd__cb__param__t_1_1hidd__led__write__evt__param.html#a71a8a39270ae1bf01ad381dca0e95c1b',1,'esp_hidd_cb_param_t::hidd_led_write_evt_param::conn_id'],['../structhidd__clcb__t.html#a71a8a39270ae1bf01ad381dca0e95c1b',1,'hidd_clcb_t::conn_id'],['../structgatts__profile__inst.html#a71a8a39270ae1bf01ad381dca0e95c1b',1,'gatts_profile_inst::conn_id']]],
+  ['connect_11',['connect',['../unionesp__hidd__cb__param__t.html#aca79c69386c9f7918c333ca0aa439336',1,'esp_hidd_cb_param_t']]],
+  ['connected_12',['connected',['../structhidd__clcb__t.html#ab36823025f12a809217f7771125658c2',1,'hidd_clcb_t']]],
+  ['cur_5fsrvc_5fid_13',['cur_srvc_id',['../structhidd__clcb__t.html#a7cbbd0e1ae863d4010064c22d3212af6',1,'hidd_clcb_t']]],
+  ['current_5fangle_14',['current_angle',['../_p_f_8c.html#acf577de2f1929995de9d91a27d23ea7d',1,'PF.c']]],
+  ['current_5fled_15',['current_led',['../_p_f_8c.html#a2f5db52b5d33f3f7a85b228b6dcde519',1,'PF.c']]]
+];
