@@ -105,13 +105,13 @@ void enviar_datos() {
     long int xcentrado = 110;
     long int ycentrado = 110;
 
-    long int distancia_rectangularx = angle_selec * cos(angulo);
-    long int distancia_rectangulary = angle_selec * sin(angulo);
+    long int distancia_rectangularx = current_led * cos(current_angle);
+    long int distancia_rectangulary = current_led * sin(current_angle);
     sprintf(msg, "*GX%ldY%ld*", xcentrado + distancia_rectangularx, ycentrado + distancia_rectangulary);
     BleSendString(msg);
     printf("Datos enviados: %s\n", msg);
-    printf("Ángulo enviado: %ld\n", angulo);
-    printf("LED seleccionado: %d\n", angle_selec);
+    printf("Ángulo enviado: %ld\n", current_angle);
+    printf("LED seleccionado: %d\n", current_led);
 }
 
 /**
